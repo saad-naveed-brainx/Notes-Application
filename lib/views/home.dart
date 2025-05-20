@@ -6,8 +6,8 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:notes/viewmodels/change_notifier_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:notes/models/notes_model.dart';
-import 'package:intl/intl.dart';
 import 'package:notes/views/note_view.dart';
+import 'package:notes/widgets/note_card.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -17,7 +17,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearching = false;
   @override
@@ -85,109 +85,75 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.font12Px,
-          vertical: AppConstants.font12Px,
-        ),
-        child: Consumer<NotesProvider>(
-          builder: (context, provider, child) {
-            final List<NotesModel> notes = provider.notes;
-            final List<NotesModel> filteredNotes =
-                _searchQuery.isEmpty
-                    ? notes
-                    : notes
-                        .where(
-                          (note) => note.title.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          ),
-                        )
-                        .toList();
-            final List<StaggeredGridTile> _cardTiles = [];
-            for (var note in filteredNotes) {
-              _cardTiles.add(
-                StaggeredGridTile.fit(
-                  crossAxisCellCount: 1,
-                  child: NoteCard(note: note),
-                ),
-              );
-            }
-            return filteredNotes.isEmpty
-                ? const Center(
-                  child: Text(
-                    ViewConstants.noNotes,
-                    style: TextStyle(color: Dark.textColor),
-                  ),
-                )
-                : MasonryGridView.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  itemBuilder:
-                      (context, index) => GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      NoteView(note: filteredNotes[index]),
+      body: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.font12Px,
+            vertical: AppConstants.font12Px,
+          ),
+          child: Consumer<NotesProvider>(
+            builder: (context, provider, child) {
+              final List<NotesModel> notes = provider.notes;
+              final List<NotesModel> filteredNotes =
+                  _searchQuery.isEmpty
+                      ? notes
+                      : notes
+                          .where(
+                            (note) => note.title.toLowerCase().contains(
+                              _searchQuery.toLowerCase(),
                             ),
-                          );
-                        },
-                        child: _cardTiles[index],
-                      ),
-                  itemCount: _cardTiles.length,
+                          )
+                          .toList();
+              final List<StaggeredGridTile> _cardTiles = [];
+              for (var note in filteredNotes) {
+                _cardTiles.add(
+                  StaggeredGridTile.fit(
+                    crossAxisCellCount: 1,
+                    child: NoteCard(note: note),
+                  ),
                 );
-          },
+              }
+              return filteredNotes.isEmpty
+                  ? const Center(
+                    child: Text(
+                      ViewConstants.noNotes,
+                      style: TextStyle(color: Dark.textColor),
+                    ),
+                  )
+                  : MasonryGridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    itemBuilder:
+                        (context, index) => GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        NoteView(note: filteredNotes[index]),
+                              ),
+                            );
+                          },
+                          child: _cardTiles[index],
+                        ),
+                    itemCount: _cardTiles.length,
+                  );
+            },
+          ),
         ),
       ),
-    );
-  }
-}
-
-class NoteCard extends StatelessWidget {
-  final NotesModel note;
-
-  const NoteCard({super.key, required this.note});
-
-  @override
-  Widget build(BuildContext context) {
-    final bgColor = Color(
-      int.parse('0xFF${note.backgroundColorHex.replaceAll('#', '')}'),
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min, // makes height fit content
-        children: [
-          Text(
-            note.title,
-            style: const TextStyle(
-              fontSize: AppConstants.font24Px,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                DateFormat('MMM d yyyy').format(note.createOrUpdatedAt),
-                style: const TextStyle(
-                  fontSize: AppConstants.font12Px,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Dark.addIconColor,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NoteView()),
+          );
+        },
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
