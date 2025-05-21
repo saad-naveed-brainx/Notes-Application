@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:notes/models/notes_model.dart';
 import 'package:notes/views/note_view.dart';
 import 'package:notes/widgets/note_card.dart';
+import 'package:notes/config/app_router.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -36,10 +37,10 @@ class _HomeState extends State<Home> {
                 ? TextField(
                   controller: _searchController,
                   autofocus: true,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Dark.textColor),
                   decoration: const InputDecoration(
-                    hintText: 'Search notes...',
-                    hintStyle: TextStyle(color: Colors.white54),
+                    hintText: ViewConstants.searchNotes,
+                    hintStyle: TextStyle(color: Dark.textColor),
                     border: InputBorder.none,
                   ),
                   onChanged: (value) {
@@ -105,9 +106,9 @@ class _HomeState extends State<Home> {
                             ),
                           )
                           .toList();
-              final List<StaggeredGridTile> _cardTiles = [];
+              final List<StaggeredGridTile> cardTiles = [];
               for (var note in filteredNotes) {
-                _cardTiles.add(
+                cardTiles.add(
                   StaggeredGridTile.fit(
                     crossAxisCellCount: 1,
                     child: NoteCard(note: note),
@@ -128,18 +129,14 @@ class _HomeState extends State<Home> {
                     itemBuilder:
                         (context, index) => GestureDetector(
                           onTap: () {
-                            Navigator.push(
+                            AppRouter.navigateTo(
                               context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) =>
-                                        NoteView(note: filteredNotes[index]),
-                              ),
+                              NoteView(note: filteredNotes[index]),
                             );
                           },
-                          child: _cardTiles[index],
+                          child: cardTiles[index],
                         ),
-                    itemCount: _cardTiles.length,
+                    itemCount: cardTiles.length,
                   );
             },
           ),
@@ -148,12 +145,9 @@ class _HomeState extends State<Home> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Dark.addIconColor,
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const NoteView()),
-          );
+          AppRouter.navigateTo(context, const NoteView());
         },
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add, color: Dark.textColor),
       ),
     );
   }

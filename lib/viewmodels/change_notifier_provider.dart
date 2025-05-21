@@ -3,6 +3,8 @@ import 'package:notes/data/repositories/local/notes_repository.dart';
 import 'package:notes/models/notes_model.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:math';
+import 'package:notes/core/constants/view_constants.dart';
+import 'package:notes/config/app_router.dart';
 
 class NotesProvider extends ChangeNotifier {
   final NotesRepository notesRepository = NotesRepository();
@@ -84,5 +86,37 @@ class NotesProvider extends ChangeNotifier {
     } catch (e) {
       print('there is an exception in updateNote: $e');
     }
+  }
+
+  Future<String?> validateAndSave(
+    TextEditingController titleController,
+    TextEditingController descriptionController,
+    BuildContext context,
+    bool isNewNote,
+    NotesModel? note,
+    Function() callBack,
+  ) async {
+    if (titleController.text.isEmpty) {
+      return ViewConstants.titleIsRequired;
+    }
+    if (descriptionController.text.isEmpty) {
+      return ViewConstants.descriptionIsRequired;
+    }
+    callBack();
+    if (isNewNote) {
+      convertToNotesModel(titleController.text, descriptionController.text);
+      AppRouter.moveBack(context);
+    } else {
+      updateNote(
+        NotesModel(
+          id: note!.id,
+          title: titleController.text,
+          description: descriptionController.text,
+          createOrUpdatedAt: DateTime.now(),
+          backgroundColorHex: note.backgroundColorHex,
+        ),
+      );
+    }
+    return null;
   }
 }

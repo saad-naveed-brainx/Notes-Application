@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:notes/core/constants/app_constants.dart';
 import 'package:notes/core/constants/view_constants.dart';
-import 'package:notes/config/theme/dark.dart';
 import 'package:notes/models/notes_model.dart';
 import 'package:notes/viewmodels/change_notifier_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:notes/config/app_router.dart';
 
 class NoteView extends StatefulWidget {
   final NotesModel? note;
@@ -31,37 +31,21 @@ class _NoteViewState extends State<NoteView> {
     descriptionController.text = widget.note?.description ?? '';
   }
 
-  Future<String?> validateAndSave() async {
-    if (titleController.text.isEmpty) {
-      return 'Title is required';
-    }
-    if (descriptionController.text.isEmpty) {
-      return 'Description is required';
-    }
-    toggleEdit();
-    if (isNewNote) {
-      await notesProvider.convertToNotesModel(
-        titleController.text,
-        descriptionController.text,
-      );
-    } else {
-      await notesProvider.updateNote(
-        NotesModel(
-          id: widget.note!.id,
-          title: titleController.text,
-          description: descriptionController.text,
-          createOrUpdatedAt: DateTime.now(),
-          backgroundColorHex: widget.note!.backgroundColorHex,
-        ),
-      );
-    }
-    return null;
-  }
-
   void toggleEdit() {
     setState(() {
       isEditing = !isEditing;
     });
+  }
+
+  void saveNote() {
+    notesProvider.validateAndSave(
+      titleController,
+      descriptionController,
+      context,
+      isNewNote,
+      widget.note,
+      toggleEdit,
+    );
   }
 
   @override
@@ -85,12 +69,12 @@ class _NoteViewState extends State<NoteView> {
             IconButton(onPressed: toggleEdit, icon: const Icon(Icons.edit)),
           if (widget.note != null && isEditing)
             IconButton(
-              onPressed: validateAndSave,
+              onPressed: saveNote,
               icon: const Icon(Icons.check),
             ),
           if (widget.note == null)
             IconButton(
-              onPressed: validateAndSave,
+              onPressed: saveNote,
               icon: const Icon(Icons.save),
             ),
         ],
@@ -107,7 +91,7 @@ class _NoteViewState extends State<NoteView> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (isEditing)
+                    if (isEditing && !isNewNote)
                       TextField(
                         controller: titleController,
                         style: TextStyle(
@@ -118,21 +102,33 @@ class _NoteViewState extends State<NoteView> {
                         minLines: 1,
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: 'Title',
+                          hintText: ViewConstants.title,
                         ),
                       ),
-                    if (!isEditing)
+                    if (!isEditing && !isNewNote)
                       Text(
-                        isNewNote
-                            ? 'New Note'
-                            : notesProvider.notes
-                                .firstWhere(
-                                  (note) => note.id == widget.note!.id,
-                                )
-                                .title,
+                        notesProvider.notes
+                                .where((note) => note.id == widget.note?.id)
+                                .firstOrNull
+                                ?.title ??
+                            '',
                         style: TextStyle(
                           fontSize: AppConstants.font24Px * 2,
                           fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    if (isNewNote)
+                      TextField(
+                        controller: titleController,
+                        style: TextStyle(
+                          fontSize: AppConstants.font24Px * 2,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        maxLines: null,
+                        minLines: 1,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: ViewConstants.title,
                         ),
                       ),
                     const SizedBox(height: AppConstants.gap24Px),
@@ -141,10 +137,10 @@ class _NoteViewState extends State<NoteView> {
                           ? DateFormat('MMMM dd, yyyy').format(DateTime.now())
                           : DateFormat('MMMM dd, yyyy').format(
                             notesProvider.notes
-                                .firstWhere(
-                                  (note) => note.id == widget.note!.id,
-                                )
-                                .createOrUpdatedAt,
+                                    .where((note) => note.id == widget.note?.id)
+                                    .firstOrNull
+                                    ?.createOrUpdatedAt ??
+                                DateTime.now(),
                           ),
                       style: TextStyle(
                         fontSize: AppConstants.font18Px,
@@ -157,7 +153,7 @@ class _NoteViewState extends State<NoteView> {
                         controller: descriptionController,
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: 'Description',
+                          hintText: ViewConstants.description,
                         ),
                         style: TextStyle(
                           fontSize: AppConstants.font18Px,
@@ -166,19 +162,31 @@ class _NoteViewState extends State<NoteView> {
                         maxLines: null,
                         minLines: 1,
                       ),
-                    if (!isEditing)
+                    if (!isEditing && !isNewNote)
                       Text(
-                        isNewNote
-                            ? ''
-                            : notesProvider.notes
-                                .firstWhere(
-                                  (note) => note.id == widget.note!.id,
-                                )
-                                .description,
+                        notesProvider.notes
+                                .where((note) => note.id == widget.note?.id)
+                                .firstOrNull
+                                ?.description ??
+                            '',
                         style: TextStyle(
                           fontSize: AppConstants.font18Px,
                           fontWeight: FontWeight.w500,
                         ),
+                      ),
+                    if (isNewNote)
+                      TextField(
+                        controller: descriptionController,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: ViewConstants.description,
+                        ),
+                        style: TextStyle(
+                          fontSize: AppConstants.font18Px,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: null,
+                        minLines: 1,
                       ),
                   ],
                 );
@@ -187,6 +195,28 @@ class _NoteViewState extends State<NoteView> {
           ),
         ),
       ),
+      floatingActionButton:
+          widget.note != null
+              ? FloatingActionButton(
+                onPressed: () async {
+                  try {
+                    await notesProvider.deleteNote(widget.note!.id);
+                    if (mounted) {
+                      AppRouter.moveBack(context);
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(ViewConstants.errorDeletingNote),
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Icon(Icons.delete),
+              )
+              : null,
     );
   }
 }
