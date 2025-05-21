@@ -14,10 +14,9 @@ class NotesRepository {
       notes = decodedNotes.map((e) => NotesModel.fromJson(e)).toList();
     }
 
-    final Map<String, NotesModel> NotesMap = {for (var e in notes) e.id: e};
-    NotesMap[note.id] = note;
-
-    final updatedList = NotesMap.values.toList();
+    final Map<String, NotesModel> notesMap = {for (var e in notes) e.id: e};
+    notesMap[note.id] = note;
+    final updatedList = notesMap.values.toList();
     final String encodedNotes = jsonEncode(
       updatedList.map((e) => e.toJson()).toList(),
     );
